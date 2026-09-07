@@ -27,7 +27,7 @@ export default function CreateNewPasswordPage() {
   };
 
   const validateForm = () => {
-    let newErrors: Record<string, string> = {};
+    const newErrors: Record<string, string> = {};
     let isValid = true;
 
     const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;

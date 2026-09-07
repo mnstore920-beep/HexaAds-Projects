@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 
-export default function LoginPage() {
+function LoginFormContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [formData, setFormData] = useState({
     email: '',
@@ -18,6 +19,21 @@ export default function LoginPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
+
+  const errorParam = searchParams.get('error');
+
+const loginErrorMessage = errorParam
+  ? errorParam === 'OAuthCallbackError' ||
+    errorParam === 'invalid_client' ||
+    errorParam === 'OAuthSignin' ||
+    errorParam === 'OAuthCallback'
+    ? 'Google sign-in encountered an issue. Please verify your Google OAuth credentials or try again.'
+    : errorParam === 'OAuthAccountNotLinked'
+      ? 'An account with this email address already exists. Please sign in with your email and password.'
+      : errorParam === 'CredentialsSignin'
+        ? 'Invalid email or password. Please try again.'
+        : `Authentication error: ${errorParam}. Please try again.`
+  : '';
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -35,7 +51,7 @@ export default function LoginPage() {
   };
 
   const validateForm = () => {
-    let newErrors: Record<string, string> = {};
+    const newErrors: Record<string, string> = {};
     let isValid = true;
 
     if (!formData.email.trim()) {
@@ -67,47 +83,46 @@ export default function LoginPage() {
         email: formData.email,
         password: formData.password,
         redirect: false,
+        callbackUrl: '/dashboard/data-sources',
       });
 
       if (res?.ok) {
         console.log("Logged in successfully!");
-        router.push('/dashboard');
+        router.push(res.url || '/dashboard/data-sources');
         router.refresh();
       } else {
         const errorMsg = res?.error || "Invalid email or password. Please try again.";
         setLoginError(errorMsg);
-        alert(errorMsg);
       }
     } catch (error) {
       console.error("Error logging in:", error);
       const errorMsg = "Error connecting to the server. Please check your backend.";
       setLoginError(errorMsg);
-      alert(errorMsg);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleGoogleLogin = () => {
-    signIn('google', { callbackUrl: '/dashboard' });
+    signIn('google', { callbackUrl: '/dashboard/data-sources' });
   };
 
   return (
     <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2">
-      <div className="hidden lg:block">
-        <div className="relative w-full bg-gray-50" style={{ position: 'relative', height: '100vh' }}>
-          <Image 
-            src="/A1.jpeg"
-            alt="Login Background" 
-            fill
-            sizes="(max-width: 1024px) 100vw, 50vw"
-            className="absolute inset-0 object-cover"
-            priority
-            unoptimized
-          />
-        </div>
+      
+      {/* FIXED LEFT IMAGE SECTION */}
+      <div className="hidden lg:block relative w-full h-screen sticky top-0 bg-gray-50">
+        <Image 
+          src="/A1.jpeg" 
+          alt="Login Background" 
+          fill
+          sizes="50vw"
+          className="object-cover"
+          priority
+        />
       </div>
 
+      {/* RIGHT FORM SECTION */}
       <div className="flex flex-col justify-center items-center px-6 py-10 sm:px-12 lg:px-20 overflow-y-auto bg-white">
         <div className="w-full max-w-md space-y-8">
           <div className="text-center space-y-3">
@@ -119,11 +134,11 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {loginError && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg text-center">
-              {loginError}
-            </div>
-          )}
+          {(loginError || loginErrorMessage) && (
+  <div className="p-3 bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg text-center leading-relaxed">
+    {loginError || loginErrorMessage}
+  </div>
+)}
 
           <form className="space-y-5" onSubmit={handleSubmit} noValidate>
             <div>
@@ -178,13 +193,16 @@ export default function LoginPage() {
             <button 
               type="submit" 
               disabled={isLoading}
-              className="w-full bg-[#5842EC] hover:bg-[#4632db] text-white text-sm font-medium py-3 rounded-lg shadow-sm transition duration-150 mt-2 disabled:opacity-50"
+              className="w-full bg-[#5842EC] hover:bg-[#4632db] text-white text-sm font-medium py-3 rounded-lg shadow-sm transition duration-150 mt-2 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
             >
+              {isLoading && (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              )}
               {isLoading ? "Logging in..." : "Login"}
             </button>
 
             <div className="text-center text-sm text-gray-500 pt-2">
-              Don't have an account? <Link href="/signup" className="text-[#5842EC] font-semibold hover:underline">Sign Up</Link>
+              Don&apos;t have an account? <Link href="/signup" className="text-[#5842EC] font-semibold hover:underline">Sign Up</Link>
             </div>
 
             <div className="text-center py-2">
@@ -194,7 +212,8 @@ export default function LoginPage() {
             <button 
               type="button" 
               onClick={handleGoogleLogin}
-              className="w-full bg-white border border-[#D0C9FF] hover:bg-gray-50 text-sm font-semibold text-[#5842EC] py-2.5 rounded-lg flex items-center justify-center gap-3 transition duration-150"
+              disabled={isLoading}
+              className="w-full bg-white border border-[#D0C9FF] hover:bg-gray-50 text-sm font-semibold text-[#5842EC] py-2.5 rounded-lg flex items-center justify-center gap-3 transition duration-150 cursor-pointer disabled:opacity-50"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -208,5 +227,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-white"><div className="w-8 h-8 border-4 border-[#5842EC] border-t-transparent rounded-full animate-spin"></div></div>}>
+      <LoginFormContent />
+    </Suspense>
   );
 }

@@ -3,11 +3,13 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function ForgotPasswordPage() {
   const [emailOrPhone, setEmailOrPhone] = useState('');
   const [error, setError] = useState('');
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmailOrPhone(e.target.value);
@@ -31,12 +33,30 @@ export default function ForgotPasswordPage() {
       return;
     }
 
+    setLoading(true);
+    setError('');
+
     try {
-      console.log("Sending recovery code to:", emailOrPhone);
-      setIsSubmitted(true);
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailOrPhone }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Failed to send recovery code. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      // Code successfully sent -> Verify Code page par email ke saath navigate karein
+      router.push(`/verify-code?email=${encodeURIComponent(emailOrPhone)}`);
     } catch (err) {
       console.error("Error connecting to backend:", err);
-      alert("Something went wrong. Please try again.");
+      setError("Something went wrong. Please check your connection.");
+      setLoading(false);
     }
   };
 
@@ -67,46 +87,33 @@ export default function ForgotPasswordPage() {
             </p>
           </div>
 
-          {isSubmitted ? (
-            <div className="text-center space-y-4 py-4">
-              <div className="p-4 bg-green-50 text-green-700 rounded-lg text-sm border border-green-200">
-                If an account exists with <strong>{emailOrPhone}</strong>, you will receive a recovery code shortly.
-              </div>
-              <button 
-                onClick={() => setIsSubmitted(false)}
-                className="text-sm text-[#5842EC] font-semibold hover:underline"
-              >
-                Try a different email/phone
-              </button>
+          <form className="space-y-6" onSubmit={handleSubmit} noValidate>
+            <div className="space-y-1.5">
+              <label className="block text-sm font-semibold text-gray-800">
+                Email or phone
+              </label>
+              <input 
+                type="text" 
+                value={emailOrPhone}
+                onChange={handleChange}
+                placeholder="abc@example.com" 
+                className={`w-full px-4 py-3 border rounded-lg text-sm placeholder-gray-300 focus:outline-none focus:ring-1 transition-colors text-black ${
+                  error 
+                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                    : 'border-gray-300 focus:border-[#5842EC] focus:ring-[#5842EC]'
+                }`} 
+              />
+              {error && <p className="text-red-500 text-[11px] mt-1">{error}</p>}
             </div>
-          ) : (
-            <form className="space-y-6" onSubmit={handleSubmit} noValidate>
-              <div className="space-y-1.5">
-                <label className="block text-sm font-semibold text-gray-800">
-                  Email or phone
-                </label>
-                <input 
-                  type="text" 
-                  value={emailOrPhone}
-                  onChange={handleChange}
-                  placeholder="abc@example.com" 
-                  className={`w-full px-4 py-3 border rounded-lg text-sm placeholder-gray-300 focus:outline-none focus:ring-1 transition-colors ${
-                    error 
-                      ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
-                      : 'border-gray-300 focus:border-[#5842EC] focus:ring-[#5842EC]'
-                  }`} 
-                />
-                {error && <p className="text-red-500 text-[11px] mt-1">{error}</p>}
-              </div>
 
-              <button 
-                type="submit" 
-                className="w-full bg-[#5842EC] hover:bg-[#4632db] text-white text-sm font-medium py-3 rounded-lg shadow-sm transition duration-150"
-              >
-                Send Code
-              </button>
-            </form>
-          )}
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="w-full bg-[#5842EC] hover:bg-[#4632db] text-white text-sm font-medium py-3 rounded-lg shadow-sm transition duration-150 disabled:opacity-50"
+            >
+              {loading ? "Sending Code..." : "Send Code"}
+            </button>
+          </form>
 
           <div className="text-center text-sm text-gray-500 pt-2">
             Remember password? Back to{' '}

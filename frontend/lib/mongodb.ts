@@ -1,27 +1,27 @@
-import { MongoClient, ServerApiVersion } from "mongodb";
+import { MongoClient } from "mongodb";
 
-const uri = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/hexaads";
-const options = {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  },
-};
+const uri = process.env.MONGODB_URI;
+
+if (!uri) {
+  throw new Error("Please define MONGODB_URI in .env.local");
+}
+
+const options = {};
 
 let client: MongoClient;
 let clientPromise: Promise<MongoClient>;
 
-if (process.env.NODE_ENV === "development") {
-  const globalWithMongo = global as typeof globalThis & {
-    _mongoClientPromise?: Promise<MongoClient>;
-  };
+declare global {
+  var _mongoClientPromise: Promise<MongoClient> | undefined;
+}
 
-  if (!globalWithMongo._mongoClientPromise) {
+if (process.env.NODE_ENV === "development") {
+  if (!global._mongoClientPromise) {
     client = new MongoClient(uri, options);
-    globalWithMongo._mongoClientPromise = client.connect();
+    global._mongoClientPromise = client.connect();
   }
-  clientPromise = globalWithMongo._mongoClientPromise;
+
+  clientPromise = global._mongoClientPromise;
 } else {
   client = new MongoClient(uri, options);
   clientPromise = client.connect();
@@ -29,8 +29,15 @@ if (process.env.NODE_ENV === "development") {
 
 export async function getDatabase(dbName?: string) {
   const client = await clientPromise;
+
   return client.db(dbName || process.env.MONGODB_DB || "hexaads");
 }
 
-export default clientPromise;
+export async function connectToDatabase() {
+  const client = await clientPromise;
+  const db = client.db(process.env.MONGODB_DB || "hexaads");
 
+  return { client, db };
+}
+
+export default clientPromise;

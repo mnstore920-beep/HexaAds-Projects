@@ -3,11 +3,9 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 
 export default function SignUpPage() {
-  const router = useRouter();
 
   const [formData, setFormData] = useState({
     accountName: '',
@@ -44,7 +42,7 @@ export default function SignUpPage() {
   };
 
   const validateForm = () => {
-    let newErrors: Record<string, string> = {};
+    const newErrors: Record<string, string> = {};
     let isValid = true;
 
     if (!formData.accountName.trim()) {
@@ -129,11 +127,10 @@ export default function SignUpPage() {
 
       if (response.ok) {
         setIsRedirecting(true);
-        // Automatically sign in the user after successful registration and redirect to dashboard
         await signIn('credentials', {
           email: formData.email,
           password: formData.password,
-          callbackUrl: '/dashboard',
+          callbackUrl: '/dashboard/data-sources',
         });
       } else {
         const errorMsg = data?.error || 'Signup failed. Please try again.';
@@ -151,25 +148,22 @@ export default function SignUpPage() {
   };
 
   const handleGoogleSignUp = () => {
-    signIn('google', { callbackUrl: '/dashboard' });
+    signIn('google', { callbackUrl: '/dashboard/data-sources' });
   };
 
   return (
     <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2">
       
-      {/* LEFT IMAGE SECTION */}
-      <div className="hidden lg:block">
-        <div className="relative w-full bg-gray-100" style={{ position: 'relative', height: '100vh' }}>
-          <Image 
-            src="/A1.jpeg" 
-            alt="HexaAds Dashboard Background" 
-            fill
-            sizes="(max-width: 1024px) 100vw, 50vw"
-            className="absolute inset-0 object-cover"
-            priority
-            unoptimized
-          />
-        </div>
+      {/* FIXED LEFT IMAGE SECTION */}
+      <div className="hidden lg:block relative w-full h-screen sticky top-0 bg-gray-100">
+        <Image 
+          src="/A1.jpeg" 
+          alt="HexaAds Dashboard Background" 
+          fill
+          sizes="50vw"
+          className="object-cover"
+          priority
+        />
       </div>
 
       {/* RIGHT FORM SECTION */}
