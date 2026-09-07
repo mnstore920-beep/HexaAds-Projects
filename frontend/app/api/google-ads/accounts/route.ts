@@ -1,6 +1,11 @@
+import { refreshGoogleAccessToken } from "@/lib/google-token";
+
 import { NextResponse } from "next/server";
+
 import { getServerSession } from "next-auth/next";
+
 import { authOptions } from "@/lib/auth";
+
 import { getDatabase } from "@/lib/mongodb";
 
 export async function GET() {
@@ -11,43 +16,105 @@ export async function GET() {
       return NextResponse.json(
         {
           success: false,
-          error: "Unauthorized. Please sign in to access Google Ads accounts.",
+          error:
+            "Unauthorized. Please sign in to access Google Ads accounts.",
         },
         { status: 401 }
       );
     }
 
-    // Attempt to extract access token from NextAuth session
-    const sessionWithToken = session as typeof session & {
-  accessToken?: string;
-};
+    // Retrieve Google OAuth credentials server-side.
+    // Tokens are intentionally not exposed through the client session.
+    let accessToken: string | undefined;
+    let refreshToken: string | undefined;
+    let tokenExpiresAt: number | undefined;
+    let tokenSource: "user" | "account" | undefined;
 
-let accessToken = sessionWithToken.accessToken;
-
-    // Fallback: Query MongoDB user record if token is not in session JWT
-    if (!accessToken && session.user.email) {
+    if (session.user.email) {
       try {
         const db = await getDatabase();
+
         const userDoc = await db.collection("users").findOne({
           email: session.user.email.toLowerCase().trim(),
         });
 
         if (userDoc?.googleAccessToken) {
           accessToken = userDoc.googleAccessToken;
-        } else {
-          // Check accounts collection (created by MongoDBAdapter)
+          refreshToken = userDoc.googleRefreshToken || undefined;
+
+          tokenExpiresAt = userDoc.googleTokenExpires
+            ? userDoc.googleTokenExpires * 1000
+            : undefined;
+
+          tokenSource = "user";
+        }
+
+        // Fallback to the MongoDBAdapter accounts collection.
+        if (!accessToken && userDoc?._id) {
           const accountDoc = await db.collection("accounts").findOne({
-           userId:
-  userDoc?._id ||
-  (session.user as typeof session.user & { id?: string }).id,
+            userId: userDoc._id,
             provider: "google",
           });
+
           if (accountDoc?.access_token) {
             accessToken = accountDoc.access_token;
+            refreshToken = accountDoc.refresh_token || undefined;
+
+            tokenExpiresAt = accountDoc.expires_at
+              ? accountDoc.expires_at * 1000
+              : undefined;
+
+            tokenSource = "account";
+          }
+        }
+
+        // Refresh the Google access token when it is expired
+        // or will expire within the next minute.
+        const shouldRefresh =
+          Boolean(refreshToken) &&
+          Boolean(tokenExpiresAt) &&
+          tokenExpiresAt <= Date.now() + 60_000;
+
+        if (shouldRefresh && refreshToken) {
+          const refreshed = await refreshGoogleAccessToken(refreshToken);
+
+          accessToken = refreshed.accessToken;
+          tokenExpiresAt = refreshed.expiresAt;
+
+          if (tokenSource === "user" && userDoc?._id) {
+            await db.collection("users").updateOne(
+              { _id: userDoc._id },
+              {
+                $set: {
+                  googleAccessToken: refreshed.accessToken,
+                  googleTokenExpires: Math.floor(
+                    refreshed.expiresAt / 1000
+                  ),
+                },
+              }
+            );
+          } else if (tokenSource === "account" && userDoc?._id) {
+            await db.collection("accounts").updateOne(
+              {
+                userId: userDoc._id,
+                provider: "google",
+              },
+              {
+                $set: {
+                  access_token: refreshed.accessToken,
+                  expires_at: Math.floor(
+                    refreshed.expiresAt / 1000
+                  ),
+                },
+              }
+            );
           }
         }
       } catch (dbError) {
-        console.error("Database lookup error for Google access token:", dbError);
+        console.error(
+          "Database lookup or Google token refresh error:",
+          dbError
+        );
       }
     }
 
@@ -69,7 +136,7 @@ let accessToken = sessionWithToken.accessToken;
       ""
     ).trim();
 
-    // Call Google Ads API to list accessible customers
+    // Call Google Ads API to list accessible customers.
     const googleAdsResponse = await fetch(
       "https://googleads.googleapis.com/v17/customers:listAccessibleCustomers",
       {
@@ -87,6 +154,7 @@ let accessToken = sessionWithToken.accessToken;
 
     if (!googleAdsResponse.ok) {
       console.error("Google Ads API error response:", data);
+
       return NextResponse.json(
         {
           success: false,
@@ -102,12 +170,16 @@ let accessToken = sessionWithToken.accessToken;
 
     const rawResourceNames: string[] = data.resourceNames || [];
 
-    // Format customer resources into clean account objects
+    // Format customer resources into clean account objects.
     const accounts = rawResourceNames.map((resourceName) => {
       const customerId = resourceName.replace("customers/", "");
+
       const formattedId =
         customerId.length === 10
-          ? `${customerId.slice(0, 3)}-${customerId.slice(3, 6)}-${customerId.slice(6)}`
+          ? `${customerId.slice(0, 3)}-${customerId.slice(
+              3,
+              6
+            )}-${customerId.slice(6)}`
           : customerId;
 
       return {
@@ -124,18 +196,21 @@ let accessToken = sessionWithToken.accessToken;
       rawResourceNames,
       count: accounts.length,
     });
- } catch (error: unknown) {
-  console.error("Internal error in /api/google-ads/accounts:", error);
+  } catch (error: unknown) {
+    console.error(
+      "Internal error in /api/google-ads/accounts:",
+      error
+    );
 
-  return NextResponse.json(
-    {
-      success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Internal server error occurred.",
-    },
-    { status: 500 }
-  );
-}
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Internal server error occurred.",
+      },
+      { status: 500 }
+    );
+  }
 }

@@ -36,9 +36,7 @@ export const authOptions: NextAuthOptions = {
         ""
       ).trim(),
 
-      allowDangerousEmailAccountLinking: true,
-
-      authorization: {
+        authorization: {
         params: {
           prompt: "consent",
           access_type: "offline",
@@ -255,16 +253,8 @@ export const authOptions: NextAuthOptions = {
       }
 
       if (account) {
-        token.accessToken = account.access_token;
-
-        token.refreshToken = account.refresh_token;
-
-        token.provider = account.provider;
-
-        token.accessTokenExpires = account.expires_at
-          ? account.expires_at * 1000
-          : undefined;
-      }
+  token.provider = account.provider;
+}
 
       return token;
     },
@@ -292,15 +282,7 @@ export const authOptions: NextAuthOptions = {
         }
       }
 
-      if (token.accessToken) {
-        const sessionWithToken = session as typeof session & {
-          accessToken?: unknown;
-        };
-
-        sessionWithToken.accessToken = token.accessToken;
-      }
-
-      if (token.provider) {
+       if (token.provider) {
         const sessionWithProvider = session as typeof session & {
           provider?: unknown;
         };
@@ -314,8 +296,5 @@ export const authOptions: NextAuthOptions = {
 
   debug: process.env.NODE_ENV === "development",
 
-  secret:
-    process.env.NEXTAUTH_SECRET ||
-    process.env.AUTH_SECRET ||
-    "hexaads_default_secret_key_change_in_production",
-};
+  secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET,
+}
