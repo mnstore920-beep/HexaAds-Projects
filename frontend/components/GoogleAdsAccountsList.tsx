@@ -22,12 +22,14 @@ export default function GoogleAdsAccountsList() {
   const [accounts, setAccounts] = useState<GoogleAdsAccount[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [requiresAuthorization, setRequiresAuthorization] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [connectedMap, setConnectedMap] = useState<Record<string, boolean>>({});
 
   const fetchAccounts = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+    setRequiresAuthorization(false);
 
     try {
       const res = await fetch("/api/google-ads/accounts", {
@@ -42,6 +44,9 @@ export default function GoogleAdsAccountsList() {
       if (res.ok && data.success) {
         setAccounts(data.accounts || []);
       } else {
+        setRequiresAuthorization(
+          data.code === "GOOGLE_ADS_AUTHORIZATION_REQUIRED"
+        );
         setError(
           data.error || "Unable to fetch Google Ads accounts. Please check permissions."
         );
@@ -129,15 +134,21 @@ export default function GoogleAdsAccountsList() {
         <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5 text-red-500" />
           <div className="flex-1 text-xs space-y-1">
-            <p className="font-bold">Google Ads API Notice</p>
+            <p className="font-bold">
+              {requiresAuthorization
+                ? "Connect Google Ads"
+                : "Google Ads API Notice"}
+            </p>
             <p className="text-red-600 leading-relaxed">{error}</p>
-            <button
-              type="button"
-              onClick={fetchAccounts}
-              className="mt-2 inline-flex items-center gap-1 font-semibold text-[#5842EC] underline hover:text-[#4632db]"
-            >
-              Try again
-            </button>
+            {!requiresAuthorization && (
+              <button
+                type="button"
+                onClick={fetchAccounts}
+                className="mt-2 inline-flex items-center gap-1 font-semibold text-[#5842EC] underline hover:text-[#4632db]"
+              >
+                Try again
+              </button>
+            )}
           </div>
         </div>
       )}

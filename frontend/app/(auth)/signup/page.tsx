@@ -158,7 +158,7 @@ export default function SignUpPage() {
     <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2">
 
       {/* FIXED LEFT IMAGE SECTION */}
-      <div className="hidden lg:block relative w-full h-screen sticky top-0 bg-gray-100">
+      <div className="hidden lg:block relative w-full h-screen bg-gray-100">
         <Image
           src="/A1.jpeg"
           alt="HexaAds Dashboard Background"

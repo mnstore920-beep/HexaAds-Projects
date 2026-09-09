@@ -1,9 +1,13 @@
 import { MongoClient } from "mongodb";
 
-const uri = process.env.MONGODB_URI;
+const uri =
+  process.env.MONGODB_DIRECT_URI?.trim() ||
+  process.env.MONGODB_URI?.trim();
 
 if (!uri) {
-  throw new Error("Please define MONGODB_URI in .env.local");
+  throw new Error(
+    "Please define MONGODB_DIRECT_URI or MONGODB_URI in .env.local"
+  );
 }
 
 const options = {};
@@ -29,14 +33,12 @@ if (process.env.NODE_ENV === "development") {
 
 export async function getDatabase(dbName?: string) {
   const client = await clientPromise;
-
   return client.db(dbName || process.env.MONGODB_DB || "hexaads");
 }
 
 export async function connectToDatabase() {
   const client = await clientPromise;
   const db = client.db(process.env.MONGODB_DB || "hexaads");
-
   return { client, db };
 }
 

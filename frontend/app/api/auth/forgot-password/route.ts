@@ -6,8 +6,6 @@ import { connectToDatabase } from "@/lib/mongodb";
 
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 const RESET_CODE_EXPIRY_MS = 10 * 60 * 1000;
 const RESET_REQUEST_COOLDOWN_MS = 60 * 1000;
 
@@ -52,6 +50,17 @@ export async function POST(req: Request) {
       });
     }
 
+    const resendApiKey = process.env.RESEND_API_KEY;
+
+    if (!resendApiKey) {
+      return NextResponse.json(
+        { error: "Unable to process password reset request." },
+        { status: 500 }
+      );
+    }
+
+    const resend = new Resend(resendApiKey);
+
     /*
      * Prevent repeated reset requests for the same account.
      */
@@ -83,7 +92,7 @@ export async function POST(req: Request) {
      */
     const codeHash = hashResetCode(code);
 
-    await resend.emails.send({
+    const emailResult = await resend.emails.send({
       from: "onboarding@resend.dev",
       to: normalizedEmail,
       subject: "HexaAds - Password Reset Code",
@@ -114,6 +123,10 @@ export async function POST(req: Request) {
         </div>
       `,
     });
+
+    if (emailResult.error) {
+      throw new Error("Unable to send password reset email.");
+    }
 
     /*
      * Save the hashed code only after the email has been accepted by Resend.

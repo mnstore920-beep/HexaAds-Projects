@@ -1,12 +1,8 @@
 import type { NextAuthOptions } from "next-auth";
-
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
-
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
-
 import bcrypt from "bcryptjs";
-
 import clientPromise, { getDatabase } from "@/lib/mongodb";
 
 interface GoogleProfile {
@@ -36,13 +32,12 @@ export const authOptions: NextAuthOptions = {
         ""
       ).trim(),
 
-        authorization: {
+      authorization: {
         params: {
           prompt: "consent",
           access_type: "offline",
           response_type: "code",
-          scope:
-            "openid email profile https://www.googleapis.com/auth/adwords",
+          scope: "openid email profile",
         },
       },
     }),
@@ -71,10 +66,21 @@ export const authOptions: NextAuthOptions = {
 
         const db = await getDatabase();
 
-        const user = await db.collection("users").findOne({ email });
+        const user = await db.collection("users").findOne({
+          email,
+        });
 
         if (!user || !user.password) {
           throw new Error("Invalid email or password");
+        }
+
+        /*
+         * Email verification is required before credentials login.
+         */
+        if (user.emailVerified !== true) {
+          throw new Error(
+            "Please verify your email address before logging in"
+          );
         }
 
         const isMatch = await bcrypt.compare(
@@ -88,15 +94,12 @@ export const authOptions: NextAuthOptions = {
 
         return {
           id: user._id.toString(),
-
           name:
             user.name ||
             `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
             user.accountName ||
             "User",
-
           email: user.email,
-
           image: user.image || null,
         };
       },
@@ -119,7 +122,6 @@ export const authOptions: NextAuthOptions = {
           }
 
           const db = await getDatabase();
-
           const usersCollection = db.collection("users");
 
           const existingUser = await usersCollection.findOne({
@@ -167,15 +169,17 @@ export const authOptions: NextAuthOptions = {
               lastName,
               accountName,
               source: "google",
+              emailVerified: true,
               ...googleData,
               createdAt: new Date(),
             });
           } else {
             const updateFields: Record<
               string,
-              string | number | null
+              string | number | boolean | null
             > = {
               ...googleData,
+              emailVerified: true,
             };
 
             if (!existingUser.image && user.image) {
@@ -198,12 +202,10 @@ export const authOptions: NextAuthOptions = {
               updateFields.source = "google";
             }
 
-            if (Object.keys(updateFields).length > 0) {
-              await usersCollection.updateOne(
-                { email },
-                { $set: updateFields }
-              );
-            }
+            await usersCollection.updateOne(
+              { email },
+              { $set: updateFields }
+            );
           }
 
           return true;
@@ -213,7 +215,7 @@ export const authOptions: NextAuthOptions = {
             error
           );
 
-          return true;
+          return false;
         }
       }
 
@@ -221,17 +223,14 @@ export const authOptions: NextAuthOptions = {
     },
 
     async redirect({ url, baseUrl }) {
-      // Allows relative callback URLs
       if (url.startsWith("/")) {
         return `${baseUrl}${url}`;
       }
 
-      // Allows callback URLs on the same origin
       if (new URL(url).origin === baseUrl) {
         return url;
       }
 
-      // Default destination
       return `${baseUrl}/dashboard/data-sources`;
     },
 
@@ -253,8 +252,8 @@ export const authOptions: NextAuthOptions = {
       }
 
       if (account) {
-  token.provider = account.provider;
-}
+        token.provider = account.provider;
+      }
 
       return token;
     },
@@ -282,7 +281,7 @@ export const authOptions: NextAuthOptions = {
         }
       }
 
-       if (token.provider) {
+      if (token.provider) {
         const sessionWithProvider = session as typeof session & {
           provider?: unknown;
         };
@@ -296,5 +295,7 @@ export const authOptions: NextAuthOptions = {
 
   debug: process.env.NODE_ENV === "development",
 
-  secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET,
-}
+  secret:
+    process.env.NEXTAUTH_SECRET ||
+    process.env.AUTH_SECRET,
+};

@@ -41,6 +41,16 @@ export async function POST(request: Request) {
       );
     }
 
+    const resendApiKey = process.env.RESEND_API_KEY;
+
+    if (!resendApiKey) {
+      console.error("RESEND_API_KEY is not configured.");
+      return NextResponse.json(
+        { error: "Unable to send verification email." },
+        { status: 500 }
+      );
+    }
+
     const finalName =
       name?.trim() ||
       `${firstName || ""} ${lastName || ""}`.trim() ||
@@ -93,16 +103,6 @@ export async function POST(request: Request) {
     const result = await usersCollection.insertOne(newUser);
 
     // Send verification email
-    const resendApiKey = process.env.RESEND_API_KEY;
-
-    if (!resendApiKey) {
-      console.error("RESEND_API_KEY is not configured.");
-      return NextResponse.json(
-        { error: "Unable to send verification email." },
-        { status: 500 }
-      );
-    }
-
     const resend = new Resend(resendApiKey);
 
     const baseUrl =
@@ -114,11 +114,14 @@ export async function POST(request: Request) {
       `${baseUrl}/verify-email?token=${verificationToken}` +
       `&email=${encodeURIComponent(normalizedEmail)}`;
 
-    const emailResult = await resend.emails.send({
-      from: "onboarding@resend.dev",
-      to: normalizedEmail,
-      subject: "HexaAds - Verify your email",
-      html: `
+    let emailResult;
+
+    try {
+      emailResult = await resend.emails.send({
+        from: "onboarding@resend.dev",
+        to: normalizedEmail,
+        subject: "HexaAds - Verify your email",
+        html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto;">
           <h2 style="color: #5842EC;">Welcome to HexaAds!</h2>
 
@@ -155,8 +158,12 @@ export async function POST(request: Request) {
 
           <p>— HexaAds Team</p>
         </div>
-      `,
-    });
+        `,
+      });
+    } catch (error) {
+      await usersCollection.deleteOne({ _id: result.insertedId });
+      throw error;
+    }
 
     if (emailResult.error) {
       // Remove the account if verification email could not be sent.

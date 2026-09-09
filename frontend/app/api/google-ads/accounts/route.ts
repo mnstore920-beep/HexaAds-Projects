@@ -29,6 +29,7 @@ export async function GET() {
     let refreshToken: string | undefined;
     let tokenExpiresAt: number | undefined;
     let tokenSource: "user" | "account" | undefined;
+    let googleScope: string | undefined;
 
     if (session.user.email) {
       try {
@@ -41,6 +42,7 @@ export async function GET() {
         if (userDoc?.googleAccessToken) {
           accessToken = userDoc.googleAccessToken;
           refreshToken = userDoc.googleRefreshToken || undefined;
+          googleScope = userDoc.googleScope || undefined;
 
           tokenExpiresAt = userDoc.googleTokenExpires
             ? userDoc.googleTokenExpires * 1000
@@ -59,6 +61,7 @@ export async function GET() {
           if (accountDoc?.access_token) {
             accessToken = accountDoc.access_token;
             refreshToken = accountDoc.refresh_token || undefined;
+            googleScope = accountDoc.scope || undefined;
 
             tokenExpiresAt = accountDoc.expires_at
               ? accountDoc.expires_at * 1000
@@ -130,6 +133,18 @@ export async function GET() {
       );
     }
 
+    if (!googleScope?.split(/\s+/).includes("https://www.googleapis.com/auth/adwords")) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Google Ads authorization is required before Google Ads accounts can be loaded.",
+          code: "GOOGLE_ADS_AUTHORIZATION_REQUIRED",
+        },
+        { status: 403 }
+      );
+    }
+
     const developerToken = (
       process.env.GOOGLE_ADS_DEVELOPER_TOKEN ||
       process.env.GOOGLE_DEVELOPER_TOKEN ||
@@ -150,7 +165,24 @@ export async function GET() {
       }
     );
 
-    const data = await googleAdsResponse.json();
+    const responseText = await googleAdsResponse.text();
+    let data: {
+      resourceNames?: string[];
+      error?: { message?: string };
+    };
+
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Google Ads returned an invalid response.",
+          code: "GOOGLE_ADS_INVALID_RESPONSE",
+        },
+        { status: 502 }
+      );
+    }
 
     if (!googleAdsResponse.ok) {
       console.error("Google Ads API error response:", data);
@@ -161,7 +193,6 @@ export async function GET() {
           error:
             data.error?.message ||
             "Failed to fetch Google Ads accounts from Google API.",
-          details: data.error || data,
           statusCode: googleAdsResponse.status,
         },
         { status: googleAdsResponse.status }
