@@ -1,0 +1,15 @@
+import Image from "next/image";
+import Link from "next/link";
+import { Search } from "lucide-react";
+import PageHeader from "@/components/dashboard/PageHeader";
+import ProductShell from "@/components/dashboard/ProductShell";
+
+const templates = [
+  { title: "Monthly SEO report", type: "SEO", level: "Advanced", image: "/A1.jpeg" },
+  { title: "Meta report", type: "Social", level: "Advanced", image: "/A2.jpeg" },
+  { title: "Google Ads report", type: "PPC", level: "Essential", image: "/A3.jpeg" },
+];
+
+export default function TemplatesPage() {
+  return <ProductShell><div className="max-w-[1440px]"><PageHeader title="Template Catalog" description="Start with a proven reporting structure, then customize it for your connected account."/><section className="rounded-[28px] bg-[#fafaff] p-5 sm:p-8"><div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center"><h2 className="text-[21px] font-medium text-[#202024]">{templates.length} Templates</h2><div className="grid gap-3 sm:grid-cols-2 lg:flex"><select className="h-11 rounded-[8px] border border-[#e0dfe6] bg-white px-4 text-[14px] text-[#92929a]"><option>Source</option><option>Google Ads</option></select><select className="h-11 rounded-[8px] border border-[#e0dfe6] bg-white px-4 text-[14px] text-[#92929a]"><option>Type</option><option>Performance</option></select><select className="h-11 rounded-[8px] border border-[#e0dfe6] bg-white px-4 text-[14px] text-[#92929a]"><option>Category</option><option>Acquisition</option></select><label className="relative"><Search className="absolute left-3 top-3 text-[#aaa]" size={17}/><input placeholder="Search" className="h-11 w-full rounded-[8px] border border-[#e0dfe6] bg-white pl-9 pr-3 text-[14px] outline-none focus:border-[#4b35f5] lg:w-44"/></label></div></div><div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-3">{templates.map((template) => <article key={template.title} className="overflow-hidden rounded-[18px] border border-[#c9c5ff] bg-white p-5"><div className="relative h-44 overflow-hidden rounded-[9px]"><Image src={template.image} alt="" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover"/></div><div className="-mt-2 flex gap-2"><span className="rounded-full bg-[#62c827] px-3 py-0.5 text-[10px] text-white">{template.level}</span><span className="rounded-full bg-[#7b6cf6] px-3 py-0.5 text-[10px] text-white">{template.type}</span></div><div className="mt-3 flex items-center justify-between gap-3"><h3 className="text-[19px] font-medium text-[#202024]">{template.title}</h3><button type="button" className="text-[12px] text-[#958cff] underline">Preview</button></div><p className="mt-2 min-h-12 text-[14px] leading-5 text-[#888891]">A clear starting point for turning connected campaign data into a shareable report.</p><div className="mt-5 flex gap-3"><Link href="/report-builder" className="rounded-[7px] bg-[#4b35f5] px-4 py-2 text-[12px] font-semibold text-white">Use Template</Link><Link href="/report-builder" className="rounded-[7px] bg-[#4b35f5] px-4 py-2 text-[12px] font-semibold text-white">Create Template</Link></div></article>)}</div></section></div></ProductShell>;
+}

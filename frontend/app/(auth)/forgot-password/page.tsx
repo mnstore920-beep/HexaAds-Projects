@@ -99,51 +99,34 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2">
-      <div className="hidden lg:block">
-        <div
-          className="relative w-full bg-gray-50"
-          style={{
-            position: "relative",
-            height: "100vh",
-          }}
-        >
-          <Image
-            src="/A1.jpeg"
-            alt="Password Reset Background"
-            fill
-            sizes="(max-width: 1024px) 100vw, 50vw"
-            className="absolute inset-0 object-cover"
-            priority
-            unoptimized
-          />
-        </div>
+    <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2 bg-white">
+      <div className="hidden lg:block relative min-h-screen overflow-hidden bg-stone-100">
+        <Image
+          src="/A1.jpeg"
+          alt="HexaAds workspace"
+          fill
+          sizes="50vw"
+          className="object-cover"
+          priority
+        />
       </div>
 
-      <div className="flex flex-col justify-center items-center px-6 py-10 sm:px-12 lg:px-20 overflow-y-auto bg-white">
-        <div className="w-full max-w-md space-y-8">
+      <div className="flex flex-col justify-center items-center px-6 py-10 sm:px-10 lg:px-16 xl:px-20 bg-white">
+        <div className="w-full max-w-[616px] space-y-7">
           <div className="text-center space-y-3">
-            <h1 className="text-2xl sm:text-3xl font-bold text-[#5842EC]">
+            <h1 className="text-[2.3rem] sm:text-[2.6rem] font-semibold tracking-[-0.04em] text-[#4b35f5]">
               Forgot Password?
             </h1>
 
-            <p className="text-sm text-gray-500 max-w-[280px] sm:max-w-xs mx-auto leading-relaxed">
-              Enter your registered email address to receive a
-              password reset code.
+            <p className="text-[15px] text-gray-500 max-w-[330px] mx-auto leading-relaxed">
+              Enter your registered email address or phone number to receive a code.
             </p>
           </div>
 
-          <form
-            className="space-y-6"
-            onSubmit={handleSubmit}
-            noValidate
-          >
-            <div className="space-y-1.5">
-              <label
-                htmlFor="email"
-                className="block text-sm font-semibold text-gray-800"
-              >
-                Email address
+          <form className="space-y-6" onSubmit={handleSubmit} noValidate>
+            <div className="space-y-2">
+              <label htmlFor="email" className="block text-[15px] font-medium text-gray-800">
+                Email or phone
               </label>
 
               <input
@@ -156,35 +139,28 @@ export default function ForgotPasswordPage() {
                 autoComplete="email"
                 required
                 disabled={loading}
-                className={`w-full px-4 py-3 border rounded-lg text-sm placeholder-gray-300 focus:outline-none focus:ring-1 transition-colors text-black disabled:bg-gray-50 disabled:cursor-not-allowed ${
+                className={`w-full h-[52px] rounded-xl border bg-white px-4 text-[15px] text-gray-800 placeholder:text-gray-400 focus:outline-none transition-colors disabled:bg-gray-50 disabled:cursor-not-allowed ${
                   error
                     ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                    : "border-gray-300 focus:border-[#5842EC] focus:ring-[#5842EC]"
+                    : "border-[#d7d3ff] focus:border-[#4b35f5] focus:ring-2 focus:ring-[#ebe7ff]"
                 }`}
               />
 
-              {error && (
-                <p className="text-red-500 text-[11px] mt-1">
-                  {error}
-                </p>
-              )}
+              {error && <p className="text-red-500 text-[11px] mt-1">{error}</p>}
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#5842EC] hover:bg-[#4632db] text-white text-sm font-medium py-3 rounded-lg shadow-sm transition duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full h-[52px] bg-[#4b35f5] hover:bg-[#4231d6] text-white text-[15px] font-medium rounded-xl shadow-sm transition duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Sending Code..." : "Send Code"}
             </button>
           </form>
 
-          <div className="text-center text-sm text-gray-500 pt-2">
+          <div className="text-center text-[15px] text-gray-500 pt-1">
             Remember password? Back to{" "}
-            <Link
-              href="/login"
-              className="text-[#5842EC] font-semibold hover:underline"
-            >
+            <Link href="/login" className="text-[#4b35f5] font-semibold hover:underline">
               Login
             </Link>
           </div>

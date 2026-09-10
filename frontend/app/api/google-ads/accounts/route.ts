@@ -1,148 +1,177 @@
-import { refreshGoogleAccessToken } from "@/lib/google-token";
-
+import { ObjectId } from "mongodb";
 import { NextResponse } from "next/server";
-
 import { getServerSession } from "next-auth/next";
 
 import { authOptions } from "@/lib/auth";
-
+import {
+  getGoogleAdsConnectionWithTokens,
+  markGoogleAdsConnectionUsed,
+  upsertGoogleAdsConnection,
+} from "@/lib/google-ads-connections";
+import { GOOGLE_ADS_SCOPE } from "@/lib/google-ads-oauth";
 import { getDatabase } from "@/lib/mongodb";
+import { refreshGoogleAccessToken } from "@/lib/google-token";
+
+const GOOGLE_ADS_API_VERSION = "v22";
+const ACCESS_TOKEN_REFRESH_WINDOW_MS = 60_000;
+
+interface UserRecord {
+  _id: ObjectId;
+  email: string;
+}
+
+interface GoogleAdsListAccessibleCustomersResponse {
+  resourceNames?: unknown;
+}
+
+function authorizationRequiredResponse() {
+  return NextResponse.json(
+    {
+      success: false,
+      error:
+        "Google Ads authorization is required before Google Ads accounts can be loaded.",
+      code: "GOOGLE_ADS_AUTHORIZATION_REQUIRED",
+    },
+    { status: 403 }
+  );
+}
+
+function reauthorizationRequiredResponse() {
+  return NextResponse.json(
+    {
+      success: false,
+      error: "Google Ads authorization has expired. Please reconnect Google Ads.",
+      code: "GOOGLE_ADS_REAUTH_REQUIRED",
+    },
+    { status: 401 }
+  );
+}
+
+function getCustomerId(resourceName: string): string | null {
+  const match = /^customers\/(\d{10})$/.exec(resourceName);
+  return match?.[1] || null;
+}
+
+function getSafeApiErrorResponse(status: number) {
+  if (status === 401) {
+    return reauthorizationRequiredResponse();
+  }
+
+  if (status === 403) {
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          "Google Ads rejected the request. Check the developer token and authorization.",
+        code: "GOOGLE_ADS_API_FORBIDDEN",
+      },
+      { status: 403 }
+    );
+  }
+
+  if (status === 429) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Google Ads is temporarily rate-limiting requests. Please try again later.",
+        code: "GOOGLE_ADS_RATE_LIMITED",
+      },
+      { status: 429 }
+    );
+  }
+
+  return NextResponse.json(
+    {
+      success: false,
+      error: "Google Ads is temporarily unavailable. Please try again later.",
+      code: "GOOGLE_ADS_UPSTREAM_ERROR",
+    },
+    { status: status >= 500 ? 502 : status }
+  );
+}
+
+async function getCanonicalUserId(
+  email: string | null | undefined
+): Promise<ObjectId | null> {
+  const normalizedEmail = email?.toLowerCase().trim();
+
+  if (!normalizedEmail) {
+    return null;
+  }
+
+  const database = await getDatabase();
+  const user = await database
+    .collection<UserRecord>("users")
+    .findOne({ email: normalizedEmail });
+
+  return user?._id || null;
+}
 
 export async function GET() {
-  try {
-    const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptions);
 
-    if (!session || !session.user) {
+  if (!session?.user?.email) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Unauthorized. Please sign in to access Google Ads accounts.",
+        code: "UNAUTHORIZED",
+      },
+      { status: 401 }
+    );
+  }
+
+  try {
+    const userId = await getCanonicalUserId(session.user.email);
+
+    if (!userId) {
       return NextResponse.json(
         {
           success: false,
-          error:
-            "Unauthorized. Please sign in to access Google Ads accounts.",
+          error: "Authenticated user was not found.",
+          code: "UNAUTHORIZED",
         },
         { status: 401 }
       );
     }
 
-    // Retrieve Google OAuth credentials server-side.
-    // Tokens are intentionally not exposed through the client session.
-    let accessToken: string | undefined;
-    let refreshToken: string | undefined;
-    let tokenExpiresAt: number | undefined;
-    let tokenSource: "user" | "account" | undefined;
-    let googleScope: string | undefined;
+    const googleAdsConnection = await getGoogleAdsConnectionWithTokens(userId);
 
-    if (session.user.email) {
+    if (!googleAdsConnection) {
+      return authorizationRequiredResponse();
+    }
+
+    const { connection, tokens } = googleAdsConnection;
+
+    if (!connection.grantedScopes.includes(GOOGLE_ADS_SCOPE)) {
+      return authorizationRequiredResponse();
+    }
+
+    let accessToken = tokens.accessToken;
+    const tokenExpiresAt = connection.accessTokenExpiresAt.getTime();
+    const shouldRefresh =
+      !Number.isFinite(tokenExpiresAt) ||
+      tokenExpiresAt <= Date.now() + ACCESS_TOKEN_REFRESH_WINDOW_MS;
+
+    if (shouldRefresh) {
+      let refreshed;
+
       try {
-        const db = await getDatabase();
-
-        const userDoc = await db.collection("users").findOne({
-          email: session.user.email.toLowerCase().trim(),
-        });
-
-        if (userDoc?.googleAccessToken) {
-          accessToken = userDoc.googleAccessToken;
-          refreshToken = userDoc.googleRefreshToken || undefined;
-          googleScope = userDoc.googleScope || undefined;
-
-          tokenExpiresAt = userDoc.googleTokenExpires
-            ? userDoc.googleTokenExpires * 1000
-            : undefined;
-
-          tokenSource = "user";
-        }
-
-        // Fallback to the MongoDBAdapter accounts collection.
-        if (!accessToken && userDoc?._id) {
-          const accountDoc = await db.collection("accounts").findOne({
-            userId: userDoc._id,
-            provider: "google",
-          });
-
-          if (accountDoc?.access_token) {
-            accessToken = accountDoc.access_token;
-            refreshToken = accountDoc.refresh_token || undefined;
-            googleScope = accountDoc.scope || undefined;
-
-            tokenExpiresAt = accountDoc.expires_at
-              ? accountDoc.expires_at * 1000
-              : undefined;
-
-            tokenSource = "account";
-          }
-        }
-
-        // Refresh the Google access token when it is expired
-        // or will expire within the next minute.
-        const shouldRefresh =
-          Boolean(refreshToken) &&
-          Boolean(tokenExpiresAt) &&
-          tokenExpiresAt <= Date.now() + 60_000;
-
-        if (shouldRefresh && refreshToken) {
-          const refreshed = await refreshGoogleAccessToken(refreshToken);
-
-          accessToken = refreshed.accessToken;
-          tokenExpiresAt = refreshed.expiresAt;
-
-          if (tokenSource === "user" && userDoc?._id) {
-            await db.collection("users").updateOne(
-              { _id: userDoc._id },
-              {
-                $set: {
-                  googleAccessToken: refreshed.accessToken,
-                  googleTokenExpires: Math.floor(
-                    refreshed.expiresAt / 1000
-                  ),
-                },
-              }
-            );
-          } else if (tokenSource === "account" && userDoc?._id) {
-            await db.collection("accounts").updateOne(
-              {
-                userId: userDoc._id,
-                provider: "google",
-              },
-              {
-                $set: {
-                  access_token: refreshed.accessToken,
-                  expires_at: Math.floor(
-                    refreshed.expiresAt / 1000
-                  ),
-                },
-              }
-            );
-          }
-        }
-      } catch (dbError) {
-        console.error(
-          "Database lookup or Google token refresh error:",
-          dbError
-        );
+        refreshed = await refreshGoogleAccessToken(tokens.refreshToken);
+      } catch {
+        return reauthorizationRequiredResponse();
       }
-    }
 
-    if (!accessToken) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "No Google OAuth access token found. Please sign in or re-authenticate with your Google account.",
-          code: "NO_ACCESS_TOKEN",
-        },
-        { status: 400 }
-      );
-    }
+      accessToken = refreshed.accessToken;
 
-    if (!googleScope?.split(/\s+/).includes("https://www.googleapis.com/auth/adwords")) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Google Ads authorization is required before Google Ads accounts can be loaded.",
-          code: "GOOGLE_ADS_AUTHORIZATION_REQUIRED",
-        },
-        { status: 403 }
-      );
+      await upsertGoogleAdsConnection(userId, {
+        accessToken: refreshed.accessToken,
+        refreshToken: refreshed.refreshToken,
+        googleSubject: connection.googleSubject,
+        googleEmail: connection.googleEmail,
+        grantedScopes: connection.grantedScopes,
+        accessTokenExpiresAt: new Date(refreshed.expiresAt),
+      });
     }
 
     const developerToken = (
@@ -151,9 +180,19 @@ export async function GET() {
       ""
     ).trim();
 
-    // Call Google Ads API to list accessible customers.
+    if (!developerToken) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Google Ads developer token is not configured.",
+          code: "GOOGLE_ADS_DEVELOPER_TOKEN_MISSING",
+        },
+        { status: 503 }
+      );
+    }
+
     const googleAdsResponse = await fetch(
-      "https://googleads.googleapis.com/v17/customers:listAccessibleCustomers",
+      `https://googleads.googleapis.com/${GOOGLE_ADS_API_VERSION}/customers:listAccessibleCustomers`,
       {
         method: "GET",
         headers: {
@@ -165,14 +204,14 @@ export async function GET() {
       }
     );
 
-    const responseText = await googleAdsResponse.text();
-    let data: {
-      resourceNames?: string[];
-      error?: { message?: string };
-    };
+    if (!googleAdsResponse.ok) {
+      return getSafeApiErrorResponse(googleAdsResponse.status);
+    }
+
+    let data: GoogleAdsListAccessibleCustomersResponse;
 
     try {
-      data = JSON.parse(responseText);
+      data = (await googleAdsResponse.json()) as GoogleAdsListAccessibleCustomersResponse;
     } catch {
       return NextResponse.json(
         {
@@ -184,34 +223,20 @@ export async function GET() {
       );
     }
 
-    if (!googleAdsResponse.ok) {
-      console.error("Google Ads API error response:", data);
+    const resourceNames = Array.isArray(data.resourceNames)
+      ? data.resourceNames.filter(
+          (resourceName): resourceName is string =>
+            typeof resourceName === "string" &&
+            getCustomerId(resourceName) !== null
+        )
+      : [];
 
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            data.error?.message ||
-            "Failed to fetch Google Ads accounts from Google API.",
-          statusCode: googleAdsResponse.status,
-        },
-        { status: googleAdsResponse.status }
-      );
-    }
-
-    const rawResourceNames: string[] = data.resourceNames || [];
-
-    // Format customer resources into clean account objects.
-    const accounts = rawResourceNames.map((resourceName) => {
-      const customerId = resourceName.replace("customers/", "");
-
-      const formattedId =
-        customerId.length === 10
-          ? `${customerId.slice(0, 3)}-${customerId.slice(
-              3,
-              6
-            )}-${customerId.slice(6)}`
-          : customerId;
+    const accounts = resourceNames.map((resourceName) => {
+      const customerId = getCustomerId(resourceName) as string;
+      const formattedId = `${customerId.slice(0, 3)}-${customerId.slice(
+        3,
+        6
+      )}-${customerId.slice(6)}`;
 
       return {
         resourceName,
@@ -221,25 +246,20 @@ export async function GET() {
       };
     });
 
+    await markGoogleAdsConnectionUsed(userId);
+
     return NextResponse.json({
       success: true,
       accounts,
-      rawResourceNames,
+      rawResourceNames: resourceNames,
       count: accounts.length,
     });
-  } catch (error: unknown) {
-    console.error(
-      "Internal error in /api/google-ads/accounts:",
-      error
-    );
-
+  } catch {
     return NextResponse.json(
       {
         success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Internal server error occurred.",
+        error: "Unable to load Google Ads accounts.",
+        code: "GOOGLE_ADS_INTERNAL_ERROR",
       },
       { status: 500 }
     );

@@ -11,6 +11,7 @@ export async function refreshGoogleAccessToken(
 ): Promise<{
   accessToken: string;
   expiresAt: number;
+  refreshToken?: string;
 }> {
   const clientId = process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_ID;
   const clientSecret =
@@ -34,7 +35,13 @@ export async function refreshGoogleAccessToken(
     cache: "no-store",
   });
 
-  const data = (await response.json()) as GoogleTokenResponse;
+  let data: GoogleTokenResponse;
+
+  try {
+    data = (await response.json()) as GoogleTokenResponse;
+  } catch {
+    throw new Error("Unable to parse the Google OAuth refresh response.");
+  }
 
   if (!response.ok || !data.access_token) {
     throw new Error("Unable to refresh Google OAuth access token.");
@@ -43,5 +50,6 @@ export async function refreshGoogleAccessToken(
   return {
     accessToken: data.access_token,
     expiresAt: Date.now() + (data.expires_in ?? 3600) * 1000,
+    refreshToken: data.refresh_token,
   };
 }

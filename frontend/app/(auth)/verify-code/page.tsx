@@ -170,18 +170,14 @@ function VerifyForm() {
   };
 
   return (
-    <div className="w-full max-w-md bg-white border border-gray-100 rounded-3xl shadow-[0_2px_20px_rgba(0,0,0,0.04)] p-8 sm:p-10">
-      <div className="text-center space-y-3 mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-[#5842EC]">
-          Enter Verification Code
+    <div className="w-full max-w-[460px] bg-white rounded-[28px] p-7 sm:p-8">
+      <div className="text-center space-y-3 mb-7">
+        <h1 className="text-[2.2rem] sm:text-[2.5rem] font-semibold tracking-[-0.04em] text-[#4b35f5]">
+          Enter verification code
         </h1>
 
-        <p className="text-xs sm:text-sm text-gray-400 max-w-xs mx-auto leading-relaxed">
-          Enter the OTP sent to{" "}
-          <span className="font-semibold text-gray-700">
-            {email || "your email"}
-          </span>
-          .
+        <p className="text-[15px] text-gray-500 max-w-[330px] mx-auto leading-relaxed">
+          Enter the OTP sent to <span className="font-semibold text-gray-700">{email || "your email"}</span>.
         </p>
       </div>
 
@@ -197,11 +193,7 @@ function VerifyForm() {
         </div>
       )}
 
-      <form
-        onSubmit={handleSubmit}
-        className="flex flex-col items-center space-y-6"
-      >
-        {/* 6-Digit OTP Input Row */}
+      <form onSubmit={handleSubmit} className="flex flex-col items-center space-y-6">
         <div className="flex justify-center gap-2 sm:gap-3 w-full">
           {otp.map((digit, index) => (
             <input
@@ -212,12 +204,10 @@ function VerifyForm() {
               type="text"
               inputMode="numeric"
               value={digit}
-              onChange={(e) =>
-                handleChange(index, e.target.value)
-              }
+              onChange={(e) => handleChange(index, e.target.value)}
               onKeyDown={(e) => handleKeyDown(index, e)}
               onPaste={handlePaste}
-              className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[#F5F3FF] text-[#5842EC] font-bold text-center text-lg focus:outline-none focus:ring-2 focus:ring-[#5842EC] transition-all"
+              className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#f5f3ff] text-[#4b35f5] font-semibold text-center text-lg border border-[#e1dcff] focus:outline-none focus:ring-2 focus:ring-[#4b35f5] transition-all"
               maxLength={1}
               autoComplete={index === 0 ? "one-time-code" : "off"}
               aria-label={`Verification digit ${index + 1}`}
@@ -225,48 +215,41 @@ function VerifyForm() {
           ))}
         </div>
 
-        {/* New Password Field */}
-        <div className="w-full space-y-1.5 text-left">
-          <label className="block text-xs font-semibold text-gray-700">
-            Set New Password
-          </label>
+        <div className="w-full space-y-2 text-left">
+          <label className="block text-[15px] font-medium text-gray-800">Set new password</label>
 
           <input
             type="password"
             placeholder="At least 8 characters"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5842EC]"
+            className="w-full h-[52px] rounded-xl border border-[#d7d3ff] bg-white px-4 text-[15px] text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#ebe7ff]"
             minLength={8}
             required
           />
 
-          <p className="text-[11px] text-gray-400">
-            Password must be at least 8 characters long.
-          </p>
+          <p className="text-[11px] text-gray-400">Password must be at least 8 characters long.</p>
         </div>
 
-        {/* Resend Code Button */}
-        <div className="text-center text-[11px] sm:text-xs text-gray-500">
-          Didn&apos;t receive the code?{" "}
+        <div className="text-center text-[13px] text-gray-500">
+          Didn&apos;t receive the code?{' '}
           <button
             type="button"
             onClick={handleResend}
             disabled={resendLoading || loading}
-            className="text-[#5842EC] font-semibold hover:underline disabled:opacity-50"
+            className="text-[#4b35f5] font-semibold hover:underline disabled:opacity-50"
           >
             {resendLoading ? "Sending..." : "Resend code"}
           </button>
         </div>
 
-        {/* Submit Button */}
         <button
           type="submit"
           disabled={!isComplete || loading}
-          className={`w-full text-sm font-medium py-3.5 rounded-lg shadow-sm transition-all duration-300 ${
+          className={`w-full h-[52px] text-[15px] font-medium rounded-xl shadow-sm transition-all duration-300 ${
             isComplete && !loading
-              ? "bg-[#5842EC] hover:bg-[#4632db] text-white cursor-pointer"
-              : "bg-[#A3A3A3] text-white cursor-not-allowed opacity-80"
+              ? "bg-[#4b35f5] hover:bg-[#4231d6] text-white cursor-pointer"
+              : "bg-[#a3a3a3] text-white cursor-not-allowed opacity-80"
           }`}
         >
           {loading ? "Verifying & Resetting..." : "Submit code"}
@@ -278,12 +261,11 @@ function VerifyForm() {
 
 export default function VerificationCodePage() {
   return (
-    <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2 bg-gray-50 lg:bg-white">
-      {/* FIXED LEFT IMAGE SECTION */}
-      <div className="hidden lg:block relative w-full h-screen sticky top-0 bg-gray-50">
+    <div className="min-h-screen grid grid-cols-1 lg:grid-cols-[1.08fr_0.92fr] bg-white">
+      <div className="hidden lg:block relative min-h-screen overflow-hidden bg-stone-100">
         <Image
           src="/A1.jpeg"
-          alt="Verification Background"
+          alt="HexaAds verification background"
           fill
           sizes="50vw"
           className="object-cover"
@@ -291,7 +273,7 @@ export default function VerificationCodePage() {
         />
       </div>
 
-      <div className="flex flex-col justify-center items-center p-6 sm:p-12 lg:p-20 overflow-y-auto">
+      <div className="flex flex-col justify-center items-center px-6 py-10 sm:px-10 lg:px-16 xl:px-20">
         <Suspense
           fallback={
             <div className="text-sm text-gray-500">
