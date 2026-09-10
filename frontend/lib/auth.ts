@@ -1,9 +1,8 @@
 import type { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import bcrypt from "bcryptjs";
-import clientPromise, { getDatabase } from "@/lib/mongodb";
+import { getDatabase } from "@/lib/mongodb";
 
 interface GoogleProfile {
   name?: string;
@@ -12,8 +11,6 @@ interface GoogleProfile {
 }
 
 export const authOptions: NextAuthOptions = {
-  adapter: MongoDBAdapter(clientPromise) as NextAuthOptions["adapter"],
-
   session: {
     strategy: "jwt",
   },
@@ -153,13 +150,6 @@ export const authOptions: NextAuthOptions = {
               ? email.split("@")[0]
               : "HexaAds Account");
 
-          const googleData = {
-            googleAccessToken: account.access_token || null,
-            googleRefreshToken: account.refresh_token || null,
-            googleTokenExpires: account.expires_at || null,
-            googleScope: account.scope || null,
-          };
-
           if (!existingUser) {
             await usersCollection.insertOne({
               name: fullName,
@@ -170,15 +160,13 @@ export const authOptions: NextAuthOptions = {
               accountName,
               source: "google",
               emailVerified: true,
-              ...googleData,
               createdAt: new Date(),
             });
           } else {
             const updateFields: Record<
               string,
-              string | number | boolean | null
+              string | boolean | null
             > = {
-              ...googleData,
               emailVerified: true,
             };
 
