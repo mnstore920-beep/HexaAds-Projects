@@ -1,8 +1,8 @@
 import { MongoClient } from "mongodb";
 
 const uri =
-  process.env.MONGODB_DIRECT_URI?.trim() ||
-  process.env.MONGODB_URI?.trim();
+  process.env.MONGODB_URI?.trim() ||
+  process.env.MONGODB_DIRECT_URI?.trim();
 
 if (!uri) {
   throw new Error(
