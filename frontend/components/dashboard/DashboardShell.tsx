@@ -7,6 +7,8 @@ import { signOut } from "next-auth/react";
 import {
   BarChart3,
   Bell,
+  ChevronLeft,
+  ChevronRight,
   Database,
   FileText,
   Grid2X2,
@@ -38,6 +40,13 @@ const primaryNavigation = [
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed((collapsed) => {
+      return !collapsed;
+    });
+  };
 
   const isActivePath = (href: string) => {
     if (href === "/dashboard") return pathname === href || pathname.startsWith("/dashboard") && pathname !== "/dashboard/data-sources";
@@ -45,64 +54,83 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     return pathname === href || pathname.startsWith(href);
   };
 
-  const sidebarContent = (
-    <>
-      <div className="flex h-[118px] items-center justify-between border-b border-[#e7e7ef] px-5 sm:px-7 lg:h-[172px] lg:px-9">
-        <Link href="/dashboard" className="flex items-center" aria-label="HexaAds home">
-          <Image src="/logo.png" alt="HexaAds" width={184} height={66} className="h-auto w-[148px] lg:w-[184px]" priority />
-        </Link>
-        <button
-          type="button"
-          className="rounded-lg p-2 text-[#4b35f5] lg:hidden"
-          onClick={() => setMobileOpen(false)}
-          aria-label="Close navigation"
-        >
-          <X size={20} />
-        </button>
-      </div>
+  const renderSidebarContent = (isMobile = false) => {
+    const compact = !isMobile && sidebarCollapsed;
+    const labelClass = `overflow-hidden whitespace-nowrap transition-[max-width,opacity] duration-200 ${compact ? "max-w-0 opacity-0" : "max-w-[180px] opacity-100"}`;
+    const itemClass = `flex h-[52px] items-center gap-3 rounded-xl text-[15px] font-medium transition-colors ${compact ? "justify-center px-0" : "px-4"}`;
 
-      <nav className="flex-1 space-y-1 px-3 py-5 lg:px-4" aria-label="Main navigation">
-        {primaryNavigation.map(({ label, href, icon: Icon }) => {
-          const active = isActivePath(href);
-          return (
-            <Link
-              key={label}
-              href={href}
-              onClick={() => setMobileOpen(false)}
-              className={`flex h-[52px] items-center gap-3 rounded-xl px-4 text-[15px] font-medium transition-colors ${active ? "bg-[#4b35f5] text-white shadow-[0_10px_25px_rgba(75,53,245,0.18)]" : "text-[#4e4e4e] hover:bg-[#f1efff] hover:text-[#4b35f5]"}`}
+    return (
+      <>
+        <div className={`flex border-b border-[#e7e7ef] ${isMobile ? "h-[118px] items-center justify-between px-5 sm:px-7" : compact ? "h-[172px] items-start justify-center px-3 pt-[72px]" : "h-[172px] items-start justify-between px-0 pt-[72px] pl-[46px]"}`}>
+          <Link href="/dashboard" className={`flex shrink-0 items-center overflow-hidden ${compact ? "h-[44px] w-[44px]" : isMobile ? "h-auto w-[148px]" : "h-[72.6px] w-[194px]"}`} aria-label="HexaAds home">
+            <Image src="/logo.png" alt="HexaAds" width={194} height={73} className="h-full w-full object-contain" priority />
+          </Link>
+          <button
+            type="button"
+            className="rounded-lg p-2 text-[#4b35f5] lg:hidden"
+            onClick={() => setMobileOpen(false)}
+            aria-label="Close navigation"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <nav className={`flex-1 space-y-1 py-5 ${compact ? "px-3" : "px-4"}`} aria-label="Main navigation">
+          {primaryNavigation.map(({ label, href, icon: Icon }) => {
+            const active = isActivePath(href);
+            return (
+              <Link
+                key={label}
+                href={href}
+                onClick={() => setMobileOpen(false)}
+                title={compact ? label : undefined}
+                className={`${itemClass} ${active ? "bg-[#4b35f5] text-white shadow-[0_10px_25px_rgba(75,53,245,0.18)]" : "text-[#4e4e4e] hover:bg-[#f1efff] hover:text-[#4b35f5]"}`}
+              >
+                <Icon className="shrink-0" size={18} strokeWidth={1.8} />
+                <span className={labelClass}>{label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="border-t border-[#e7e7ef] px-3 py-4">
+          {!isMobile && (
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              className={`mb-2 flex h-10 items-center rounded-xl text-[#4b35f5] transition-colors hover:bg-[#f1efff] ${compact ? "w-full justify-center" : "ml-auto w-10 justify-center"}`}
+              aria-label={compact ? "Expand sidebar" : "Collapse sidebar"}
+              title={compact ? "Expand sidebar" : "Collapse sidebar"}
             >
-              <Icon size={18} strokeWidth={1.8} />
-              <span>{label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-
-      <div className="border-t border-[#e7e7ef] px-3 py-4">
-        <Link href="/settings" onClick={() => setMobileOpen(false)} className="flex h-[50px] items-center gap-3 rounded-xl px-4 text-[15px] font-medium text-[#4e4e4e] hover:bg-[#f1efff] hover:text-[#4b35f5]">
-          <Settings size={18} strokeWidth={1.8} />
-          Settings
-        </Link>
-        <Link href="/help" onClick={() => setMobileOpen(false)} className="flex h-[50px] items-center gap-3 rounded-xl px-4 text-[15px] font-medium text-[#4e4e4e] hover:bg-[#f1efff] hover:text-[#4b35f5]">
-          <HelpCircle size={18} strokeWidth={1.8} />
-          Help Centre
-        </Link>
-        <button
-          type="button"
-          onClick={() => signOut({ callbackUrl: "/login" })}
-          className="flex h-[50px] w-full items-center gap-3 rounded-xl px-4 text-left text-[15px] font-medium text-[#4e4e4e] hover:bg-[#f1efff] hover:text-[#4b35f5]"
-        >
-          <LogOut size={18} strokeWidth={1.8} />
-          Logout
-        </button>
-      </div>
-    </>
-  );
+              {compact ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+            </button>
+          )}
+          <Link href="/settings" onClick={() => setMobileOpen(false)} title={compact ? "Settings" : undefined} className={`${itemClass} text-[#4e4e4e] hover:bg-[#f1efff] hover:text-[#4b35f5]`}>
+            <Settings className="shrink-0" size={18} strokeWidth={1.8} />
+            <span className={labelClass}>Settings</span>
+          </Link>
+          <Link href="/help" onClick={() => setMobileOpen(false)} title={compact ? "Help Centre" : undefined} className={`${itemClass} text-[#4e4e4e] hover:bg-[#f1efff] hover:text-[#4b35f5]`}>
+            <HelpCircle className="shrink-0" size={18} strokeWidth={1.8} />
+            <span className={labelClass}>Help Centre</span>
+          </Link>
+          <button
+            type="button"
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            title={compact ? "Logout" : undefined}
+            className={`${itemClass} w-full text-left text-[#4e4e4e] hover:bg-[#f1efff] hover:text-[#4b35f5]`}
+          >
+            <LogOut className="shrink-0" size={18} strokeWidth={1.8} />
+            <span className={labelClass}>Logout</span>
+          </button>
+        </div>
+      </>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-white lg:flex">
-      <aside className="hidden w-[340px] shrink-0 flex-col bg-[#fafaff] lg:flex">
-        {sidebarContent}
+      <aside className={`hidden shrink-0 flex-col border-r border-[#e7e7ef] bg-[#fafaff] transition-[width] duration-200 ease-out lg:flex ${sidebarCollapsed ? "w-[76px]" : "w-[252px]"}`}>
+        {renderSidebarContent()}
       </aside>
 
       {mobileOpen && (
@@ -110,7 +138,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       )}
 
       <aside className={`fixed inset-y-0 left-0 z-50 w-[300px] bg-[#fafaff] shadow-2xl transition-transform duration-200 lg:hidden ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
-        {sidebarContent}
+        {renderSidebarContent(true)}
       </aside>
 
       <main className="min-w-0 flex-1">
