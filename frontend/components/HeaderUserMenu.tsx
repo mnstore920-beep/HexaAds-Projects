@@ -82,7 +82,7 @@ export default function HeaderUserMenu() {
   const avatarUrl = session?.user?.image || '/A1.jpeg';
 
   return (
-    <div className="flex items-center gap-3 relative">
+    <div className="relative flex items-center gap-[37px]">
 
       <div className="relative" ref={notificationRef}>
         <button
@@ -91,18 +91,14 @@ export default function HeaderUserMenu() {
             setIsNotificationOpen(!isNotificationOpen);
             setIsUserMenuOpen(false);
           }}
-          className={`relative p-2 rounded-xl transition-all cursor-pointer ${
-            isNotificationOpen
-              ? 'bg-[#EAE6FF] text-[#5842EC]'
-              : 'text-gray-500 hover:text-[#5842EC] hover:bg-gray-100'
+          className={`relative flex h-[34px] w-[34px] items-center justify-center rounded-none p-0 transition-all cursor-pointer ${
+            isNotificationOpen ? 'text-[#6366F1]' : 'text-[#6366F1] hover:text-[#4F46E5]'
           }`}
           aria-label="Notifications"
         >
-          <Bell className="w-5 h-5" />
+            <Bell className="h-[34px] w-[34px]" strokeWidth={1.8} />
           {unreadCount > 0 && (
-            <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white animate-pulse">
-              {unreadCount}
-            </span>
+            <span className="absolute -right-[1px] -top-[1px] block h-[6px] w-[6px] rounded-full bg-[#EF4444]" aria-hidden="true" />
           )}
         </button>
 
@@ -197,15 +193,11 @@ export default function HeaderUserMenu() {
             setIsUserMenuOpen(!isUserMenuOpen);
             setIsNotificationOpen(false);
           }}
-          className={`flex items-center gap-3 p-1.5 sm:px-3 sm:py-2 rounded-xl transition-all cursor-pointer border ${
-            isUserMenuOpen
-              ? 'bg-gray-50 border-gray-200'
-              : 'border-transparent hover:bg-gray-50 hover:border-gray-200'
-          }`}
+          className="flex items-center rounded-xl border border-transparent p-0 transition-all cursor-pointer"
           aria-label="User menu"
         >
           {/* Avatar */}
-          <div className="w-8 h-8 sm:w-9 sm:h-9 relative rounded-full overflow-hidden border border-gray-200 bg-[#EAE6FF] flex-shrink-0 flex items-center justify-center text-[#5842EC] font-bold text-xs">
+          <div className="relative flex h-[48px] w-[48px] flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#EAE6FF] text-xs font-bold text-[#5842EC] shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
             {avatarUrl ? (
               <Image
                 src={avatarUrl}
@@ -219,8 +211,7 @@ export default function HeaderUserMenu() {
             )}
           </div>
 
-]
-          <div className="hidden md:block text-left max-w-[130px] lg:max-w-[160px]">
+          <div className="hidden max-w-[130px] text-left md:block lg:hidden">
             <div className="text-xs font-bold text-gray-800 truncate leading-tight">
               {displayName}
             </div>
@@ -230,7 +221,7 @@ export default function HeaderUserMenu() {
           </div>
 
           <ChevronDown
-            className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
+            className={`h-4 w-4 text-gray-400 transition-transform duration-200 lg:hidden ${
               isUserMenuOpen ? 'rotate-180 text-gray-600' : ''
             }`}
           />
