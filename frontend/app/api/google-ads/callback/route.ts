@@ -167,7 +167,9 @@ export async function GET(request: Request) {
 
     const response = redirectToDataSources(request, "connected", returnTo);
     return clearStateCookie(response);
-  } catch {
+  } catch (error) {
+    console.error("[Google Ads OAuth callback]", error);
+
     const response = redirectToDataSources(request, "error", returnTo);
     return clearStateCookie(response);
   }

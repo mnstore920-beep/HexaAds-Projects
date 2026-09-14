@@ -159,7 +159,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           </div>
         </header>
 
-        <div className="px-4 pb-10 pt-[20px] sm:px-6 lg:pl-[53px] lg:pr-[40px] lg:pb-10">
+        <div className="px-4 pb-10 pt-[8px] sm:px-6 lg:pl-[53px] lg:pr-[40px] lg:pb-10">
           {children}
         </div>
       </main>
