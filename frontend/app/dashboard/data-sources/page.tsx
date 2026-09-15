@@ -5,6 +5,7 @@ import { Database, ExternalLink, X } from "lucide-react";
 import GoogleAdsAccountsList from "@/components/GoogleAdsAccountsList";
 
 function GoogleAdsMark() {
+
   return <svg className="h-11 w-11" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M40 40H32V16H40V40ZM28 40H20V24H28V40Z" fill="#F9AB00"/><circle cx="12" cy="36" r="4" fill="#E37400"/></svg>;
 }
 
@@ -12,7 +13,7 @@ export default function DataSourcesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   return (
-    <div className="max-w-[1440px] font-poppins">
+    <div className="w-full max-w-[1440px] font-poppins">
       <button
         type="button"
         onClick={() => setDialogOpen(true)}
@@ -29,13 +30,13 @@ export default function DataSourcesPage() {
         </p>
       </div>
 
-      <section aria-labelledby="available-sources" className="mt-[73px]">
-        <div className="mb-[41px] flex items-baseline gap-[12px]">
+      <section aria-labelledby="available-sources" className="mt-[56px]">
+        <div className="mb-[32px] flex items-baseline gap-[12px]">
           <h2 id="available-sources" className="text-[24px] font-normal leading-[40px] text-black">Connect data source</h2>
           <span className="text-[17px] font-light leading-[30px] text-[#555555]">(2 providers available)</span>
         </div>
 
-        <div className="grid grid-cols-[repeat(5,252px)] gap-x-[45px] gap-y-[73px]">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-[repeat(5,252px)]">
           <article className="flex h-[228px] w-[252px] flex-col items-center rounded-[10px] border-[0.5px] border-[#ACACAC] bg-white px-[11px] pb-[12px] pt-[32px] shadow-none">
             <div className="flex h-[64px] w-[64px] items-center justify-center"><GoogleAdsMark /></div>
             <h3 className="mt-[10px] text-center text-[17px] font-light leading-[30px] text-[#555555]">Google Ads</h3>
@@ -57,7 +58,7 @@ export default function DataSourcesPage() {
         </div>
       </section>
 
-      <div className="mt-12 max-w-[1040px]">
+      <div className="mt-10 w-full max-w-[1040px]">
         <GoogleAdsAccountsList />
       </div>
 
