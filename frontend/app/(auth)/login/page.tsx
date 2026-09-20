@@ -125,7 +125,7 @@ const loginErrorMessage = errorParam
         <div className="w-full max-w-[616px] space-y-7">
           <div className="text-center space-y-3">
             <h1 className="text-4xl sm:text-[2.5rem] font-semibold tracking-[-0.04em] text-[#4b35f5]">
-              Welcome back Manish!
+              Welcome back!
             </h1>
             <p className="text-[15px] text-gray-500 leading-relaxed">
               Sign in to access your HexaAds dashboard and manage your Ad Campaigns.
