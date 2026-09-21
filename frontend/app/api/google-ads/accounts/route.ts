@@ -204,9 +204,16 @@ export async function GET() {
       }
     );
 
-    if (!googleAdsResponse.ok) {
-      return getSafeApiErrorResponse(googleAdsResponse.status);
-    }
+   if (!googleAdsResponse.ok) {
+  const errorBody = await googleAdsResponse.text();
+
+  console.error("[Google Ads API Error]", {
+    status: googleAdsResponse.status,
+    body: errorBody,
+  });
+
+  return getSafeApiErrorResponse(googleAdsResponse.status);
+}
 
     let data: GoogleAdsListAccessibleCustomersResponse;
 
@@ -254,7 +261,9 @@ export async function GET() {
       rawResourceNames: resourceNames,
       count: accounts.length,
     });
-  } catch {
+  } catch (error) {
+    console.error("[Google Ads Accounts Internal Error]", error);
+
     return NextResponse.json(
       {
         success: false,
