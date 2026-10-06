@@ -6,8 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "next dev frontend",
-    "build": "next build frontend --webpack",
-    "start": "next start frontend -p $PORT",
+    "build": "next build --webpack",
+    "start": "next start -p $PORT",
     "lint": "eslint frontend",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
