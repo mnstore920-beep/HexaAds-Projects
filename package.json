@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "next dev frontend",
     "build": "next build frontend --webpack",
-    "start": "next start frontend",
+    "start": "next start frontend -p $PORT",
     "lint": "eslint frontend",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
